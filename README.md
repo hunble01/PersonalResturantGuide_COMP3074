@@ -1,4 +1,4 @@
-# Personal Restaurant Guide
+# Personal Restaurant Guide 
 
 **Overview**  
 The *Personal Restaurant Guide* is an Android application designed to help users track the restaurants they visit. It allows users to store restaurant details, rate them, view their locations on a map, and share information via email, and optionally on social media platforms like Facebook and Twitter. This standalone application (no back-end server required) will run on a selected Android device.
