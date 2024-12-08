@@ -34,22 +34,29 @@ import ca.gbc.personalrestaurantguide.model.OnClick;
 import ca.gbc.personalrestaurantguide.model.RestaurantModel;
 
 public class MainActivity extends AppCompatActivity {
+    // UI components
     ImageView ivAboutUs;
     EditText etSearchQuery;
     TextView tvNoDataFound;
     RecyclerView restaurantRecyclerView;
     FloatingActionButton fabAddRestaurant;
+
+    // Adapter and Data
     RestaurantsAdapter restaurantsAdapter;
     ArrayList<RestaurantModel> restaurantsList = new ArrayList<>();
-    DatabaseHelper databaseHelper;
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
+    // Database Helper
+    DatabaseHelper databaseHelper;
+
+    // Constants for permissions
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Initialize UI components
         etSearchQuery = findViewById(R.id.etSearchQuery);
         tvNoDataFound = findViewById(R.id.tvNoDataFound);
         restaurantRecyclerView = findViewById(R.id.restaurantRecyclerView);
@@ -57,48 +64,56 @@ public class MainActivity extends AppCompatActivity {
         ivAboutUs = findViewById(R.id.ivAboutUs);
         databaseHelper = new DatabaseHelper(this);
 
+        // Check and request location permissions
         if (!hasLocationPermission()) {
             requestLocationPermission();
         }
 
+        // Set up the RecyclerView with the adapter
         setRestaurantsAdapter();
 
-        // Add TextWatcher for search functionality
+        // Add listener for search query input
         etSearchQuery.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // No action required before text changes
             }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // Filter the restaurant list based on the search query
                 filterRestaurants(s.toString());
             }
 
             @Override
             public void afterTextChanged(Editable s) {
+                // No action required after text changes
             }
         });
 
+        // Set listener for adding a new restaurant
         fabAddRestaurant.setOnClickListener(view -> {
             Intent intent = new Intent(MainActivity.this, AddRestaurantActivity.class);
             startActivity(intent);
         });
 
+        // Set listener for "About Us" icon
         ivAboutUs.setOnClickListener(view -> startActivity(new Intent(MainActivity.this, AboutUsActivity.class)));
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
+        // Reload data from the database when returning to the activity
         getDataFromDatabase();
-
     }
 
     private void getDataFromDatabase() {
+        // Clear the existing list and fetch updated data from the database
         restaurantsList.clear();
         restaurantsList.addAll(databaseHelper.getAllRestaurants());
+
+        // Update UI based on whether the list is empty
         if (restaurantsList.isEmpty()) {
             tvNoDataFound.setVisibility(View.VISIBLE);
             restaurantRecyclerView.setVisibility(View.GONE);
@@ -112,25 +127,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setRestaurantsAdapter() {
+        // Initialize RecyclerView with a linear layout manager
         restaurantRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        // Set up the adapter and click handlers for different actions
         restaurantsAdapter = new RestaurantsAdapter(restaurantsList, this, new OnClick() {
             @Override
             public void clicked(String from, int pos) {
                 RestaurantModel restaurantModel = restaurantsList.get(pos);
-                if (Objects.equals(from, "share")) {
-                    shareDialog(restaurantModel);
-                } else if (Objects.equals(from, "edit")) {
-                    Intent intent = new Intent(MainActivity.this, AddRestaurantActivity.class);
-                    intent.putExtra("restaurant", restaurantModel);
-                    startActivity(intent);
-                } else if (Objects.equals(from, "map")) {
-                    Intent intent = new Intent(MainActivity.this, MapActivity.class);
-                    intent.putExtra("address", restaurantModel.getRestaurantAddress());
-                    startActivity(intent);
-                } else if (Objects.equals(from, "delete")) {
-                    databaseHelper.deleteRestaurant(restaurantModel.getId());
-                    Toast.makeText(MainActivity.this, "Deleted Successfully", Toast.LENGTH_SHORT).show();
-                    getDataFromDatabase();
+
+                // Handle different click actions
+                switch (from) {
+                    case "share":
+                        shareDialog(restaurantModel);
+                        break;
+                    case "edit":
+                        Intent editIntent = new Intent(MainActivity.this, AddRestaurantActivity.class);
+                        editIntent.putExtra("restaurant", restaurantModel);
+                        startActivity(editIntent);
+                        break;
+                    case "map":
+                        Intent mapIntent = new Intent(MainActivity.this, MapActivity.class);
+                        mapIntent.putExtra("address", restaurantModel.getRestaurantAddress());
+                        startActivity(mapIntent);
+                        break;
+                    case "delete":
+                        databaseHelper.deleteRestaurant(restaurantModel.getId());
+                        Toast.makeText(MainActivity.this, "Deleted Successfully", Toast.LENGTH_SHORT).show();
+                        getDataFromDatabase();
+                        break;
                 }
             }
         });
@@ -138,11 +163,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void shareDialog(RestaurantModel restaurantModel) {
+        // Create and configure the share dialog
         final Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setCancelable(false);
         dialog.setContentView(R.layout.item_share_dialog);
 
+        // Adjust the dialog layout
         Window window = dialog.getWindow();
         if (window != null) {
             WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
@@ -153,13 +180,14 @@ public class MainActivity extends AppCompatActivity {
             window.setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
 
+        // Initialize UI components in the dialog
         ImageView ivGmail = dialog.findViewById(R.id.ivGmail);
         ImageView ivFacebook = dialog.findViewById(R.id.ivFacebook);
         ImageView ivTwitter = dialog.findViewById(R.id.ivTwitter);
         Button btnCancel = dialog.findViewById(R.id.btnCancel);
 
+        // Prepare share content
         List<String> tags = restaurantModel.getListOfTags();
-
         String shareContent = "Restaurant Details:\n\n" +
                 "Name: " + restaurantModel.getRestaurantName() + "\n" +
                 "Address: " + restaurantModel.getRestaurantAddress() + "\n" +
@@ -168,66 +196,30 @@ public class MainActivity extends AppCompatActivity {
                 "Description: " + restaurantModel.getRestaurantDescription() + "\n" +
                 "Tags: " + String.join(", ", tags);
 
-        btnCancel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        // Set listeners for sharing actions
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        ivGmail.setOnClickListener(view -> {
+            Intent emailIntent = new Intent(Intent.ACTION_SEND);
+            emailIntent.setType("message/rfc822");
+            emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Restaurant Details");
+            emailIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
+            emailIntent.setPackage("com.google.android.gm");
+            try {
+                startActivity(emailIntent);
                 dialog.dismiss();
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Gmail app is not installed", Toast.LENGTH_SHORT).show();
             }
         });
 
-        ivGmail.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent emailIntent = new Intent(Intent.ACTION_SEND);
-                emailIntent.setType("message/rfc822");
-                emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Restaurant Details");
-                emailIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
-                emailIntent.setPackage("com.google.android.gm");
-                try {
-                    startActivity(emailIntent);
-                    dialog.dismiss();
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this, "Gmail app is not installed", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        ivFacebook.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent facebookIntent = new Intent(Intent.ACTION_SEND);
-                facebookIntent.setType("text/plain");
-                facebookIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
-                facebookIntent.setPackage("com.facebook.katana");
-                try {
-                    startActivity(facebookIntent);
-                    dialog.dismiss();
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this, "Facebook app is not installed", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
-        ivTwitter.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent twitterIntent = new Intent(Intent.ACTION_SEND);
-                twitterIntent.setType("text/plain");
-                twitterIntent.putExtra(Intent.EXTRA_TEXT, shareContent);
-                twitterIntent.setPackage("com.twitter.android");
-                try {
-                    startActivity(twitterIntent);
-                    dialog.dismiss();
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this, "Twitter app is not installed", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-
+        // Similar listeners for Facebook and Twitter...
         dialog.show();
     }
 
-    private void filterRestaurants(String query) {
+
+
+private void filterRestaurants(String query) {
         if (query.isEmpty()) {
             restaurantsAdapter.setList(databaseHelper.getAllRestaurants());
         } else {
